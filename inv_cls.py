@@ -663,7 +663,7 @@ class inv_port:
             print(index, row['ticker'], row['name'], row['figi'],row['instrument_type'],"{:.2f}".format(row['current_amount']),"{:.2f}".format(row['delta']) )
     def out_csv_port_ext(self):
         #fname_ext = 'share' + self.fname
-        return # temp for test
+        #return # temp for test
         fname_ext = self.fname_ext_csv
         with open(fname_ext, 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
