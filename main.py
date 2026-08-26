@@ -37,7 +37,8 @@ def main_from_tink():
     #a.read_data_f() # get data from file
     #a.out_csv_port()
 
-    a.sort_portfolio() # вывод в файл
+    #a.sort_portfolio() # вывод в файл
+    a.sort_portfolio2()  # вывод в файл
     a.porfolio_total_inf()
     #a.bonds_sort() # расширенная инф по облигациям в портфеле
 
