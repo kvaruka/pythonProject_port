@@ -116,7 +116,10 @@ class inv_port:
             'Name_pos': [],  # Total_etf
             'curr':[],
             'amount': [],      # name
-            'date':[]
+            'date':[],
+            'curr_amount':[],
+            'avr_amount': [],
+            'delta':[]
         }
         self.pd_port = pd.DataFrame(self.port_type)              # Pandas Portfolio from Tinkoff
         self.pd_port_ext = pd.DataFrame(self.port_type_ext)      # Pandas Portfolio + extra colunms
@@ -156,7 +159,7 @@ class inv_port:
                     }
                     self.pd_ref_shares = pd.DataFrame(self.shares)
                     self.pd_ref_bonds = pd.DataFrame(self.bonds)
-                    self.pd_ref_bonds.info()
+                    #self.pd_ref_bonds.info()
                     self.pd_ref_etfs = pd.DataFrame(self.etfs)
 
             if mode == 'RTF':
@@ -221,6 +224,7 @@ class inv_port:
 
     def get_porfolio(self):
         # конструкция сомнительная
+        print("get_porfolio")
         with Client(self.token) as client:
             client_test = client
             tariff = client.users.get_user_tariff()
@@ -302,6 +306,7 @@ class inv_port:
 #                    break
 #            return res_pos
     def get_porfolio_pandas(self): # fill self.pd_port
+        print('<<< beg get_porfolio_pandas')
         start_time = time.perf_counter()  # Точка старта
         # Ваш код здесь
         # sum(range(10**7))
@@ -309,7 +314,6 @@ class inv_port:
         #print(portfolio)
         port_positions = portfolio.positions
         step = 0
-
         for port_pos in port_positions:
             #print(port_pos)
             #print(dir(port_pos))
@@ -361,9 +365,9 @@ class inv_port:
                 #step = 0
         #print(self.pd_port)
         #self.out_csv_port()
-
         end_time = time.perf_counter()    # Точка финиша
         print(f"Время выполнения get_portfolio_pandas: {end_time - start_time:.4f} сек.")
+        print('>>> end get_porfolio_pandas')
     def bond_detail(self):
         figi = 'TCS00A109551'
         figi = 'TCS00A10B4K3' # oferta 2
@@ -486,8 +490,63 @@ class inv_port:
         #    index=False
         #)
 
+    def sort_portfolio2(self):
+        # версия оптимизированная версия sort_portfolio
+        print("<<< beg sort portfolio2")
+
+        # Список типов инструментов и соответствующих им имён файлов для экспорта
+        instrument_types = {
+            'share': self.fname_share,
+            'etf':   self.fname_etf,
+            'bond':  self.fname_bond
+        }
+
+        for inst_type, filename in instrument_types.items():
+            # 1. Фильтруем исходный портфель по типу и валюте (рубли)
+            df_filtered = self.pd_port[
+                (self.pd_port['instrument_type'] == inst_type) &
+                (self.pd_port['current_price_curr'] == 'rub')
+                ].copy()
+
+            if df_filtered.empty:
+                continue
+
+            # 2. Векторные расчеты без циклов (работают мгновенно)
+            #Текущая стоимость
+            df_filtered['current_amount'] = df_filtered['current_price'] * df_filtered['quantity']          #
+            #Стоимость покупки
+            df_filtered['average_amount'] = df_filtered['average_position_price'] * df_filtered['quantity'] #
+            #Разница + прибыль - убыток
+            df_filtered['delta'] = df_filtered['current_amount'] - df_filtered['average_amount']
+
+            # 3. Сортировка по убыванию стоимости
+            self.pd_print = df_filtered.sort_values('current_amount', ascending=False).reset_index(drop=True)
+
+            # 4. Вывод и сохранение результатов
+            #self.print_port()
+            self.pd_port_ext = self.pd_print
+            self.fname_ext_csv = filename
+
+            self.out_csv_port_ext()
+
+
+            # Фильтруем по двум условиям и берем конкретный столбец
+            total_rub_xxxx = df_filtered.loc[
+                (self.pd_port['instrument_type'] == inst_type) &
+                (self.pd_port['current_price_curr'] == 'rub'),
+                'current_amount'
+            ].sum()
+
+            print(inst_type)
+            print(total_rub_xxxx)
+
+        self.all_inst = []
+        print(">>> end sort portfolio")
+
+
+
     def sort_portfolio(self):
-        print("sort portfolio")
+        print("<<<< beg sort portfolio")
         # share  Stocks
         self.pd_port_share =pd.DataFrame(columns=self.pd_port)# create a frame
         self.pd_port_share = self.pd_port.loc[self.pd_port['instrument_type'] == 'share'] # create a stock pandas
@@ -658,13 +717,20 @@ class inv_port:
         self.fname_ext_csv = self.fname_bond
         self.pd_port_ext = self.pd_print
         self.out_csv_port_ext()
+        print(">>>> end sort portfolio")
     def print_port(self):
         for index, row in self.pd_print.iterrows():
             print(index, row['ticker'], row['name'], row['figi'],row['instrument_type'],"{:.2f}".format(row['current_amount']),"{:.2f}".format(row['delta']) )
     def out_csv_port_ext(self):
         #fname_ext = 'share' + self.fname
-        #return # temp for test
+
+
         fname_ext = self.fname_ext_csv
+
+        print('out_csv_port_ext: out file ->', fname_ext)
+
+        #return # temp for test
+
         with open(fname_ext, 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
                                     # quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -775,41 +841,173 @@ class inv_port:
         today = date.today()
         d1 = today.strftime("%d.%m.%Y")
 
+# Для вычислений по портфелю вручную по позициям
+        df_filtered = self.pd_port[
+            #(self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub')
+            ].copy()
+        # 2. Векторные расчеты без циклов (работают мгновенно)
+        # Текущая стоимость
+        df_filtered['current_amount'] = df_filtered['current_price'] * df_filtered['quantity']  #
+        # Стоимость покупки
+        df_filtered['average_amount'] = df_filtered['average_position_price'] * df_filtered['quantity']  #
+        # Разница + прибыль - убыток
+        df_filtered['delta'] = df_filtered['current_amount'] - df_filtered['average_amount']
+
+        total_rub_curr_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+        total_rub_average_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['average_position_price_curr'] == 'rub'),
+            'average_amount'
+        ].sum()
+        delta = total_rub_curr_amount - total_rub_average_amount
 
         self.pd_port_total.loc[len(self.pd_port_total.index)] = [
             'Share',
             portfolio.total_amount_shares.currency,
             portfolio.total_amount_shares.units + portfolio.total_amount_shares.nano/1000000000, # amount
-            d1
+            d1,
+            total_rub_curr_amount,
+            total_rub_average_amount,
+            delta,
         ]
+
+        total_rub_curr_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'bond') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+        total_rub_average_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'bond') &
+            (self.pd_port['average_position_price_curr'] == 'rub'),
+            'average_amount'
+        ].sum()
+        delta = total_rub_curr_amount - total_rub_average_amount
 
         self.pd_port_total.loc[len(self.pd_port_total.index)] = [
             'Bonds',
             portfolio.total_amount_bonds.currency,
             portfolio.total_amount_bonds.units + portfolio.total_amount_bonds.nano/1000000000, # amount
-            d1
+            d1,
+            total_rub_curr_amount,
+            total_rub_average_amount,
+            delta,
         ]
+
+        total_rub_curr_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'etf') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+        total_rub_average_amount = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'etf') &
+            (self.pd_port['average_position_price_curr'] == 'rub'),
+            'average_amount'
+        ].sum()
+        delta =  total_rub_curr_amount - total_rub_average_amount
 
         self.pd_port_total.loc[len(self.pd_port_total.index)] = [
             'ETF',
             portfolio.total_amount_etf.currency,
             portfolio.total_amount_etf.units + portfolio.total_amount_etf.nano/1000000000, # amount
-            d1
+            d1,
+            total_rub_curr_amount,
+            total_rub_average_amount,
+            delta,
         ]
         self.pd_port_total.loc[len(self.pd_port_total.index)] = [
             'curr',
             portfolio.total_amount_currencies.currency,
             portfolio.total_amount_currencies.units + portfolio.total_amount_currencies.nano/1000000000, # amount
-            d1
+            d1,
+            1,
+            1,
+            0
         ]
         self.pd_port_total.loc[len(self.pd_port_total.index)] = [
             'Total',
             portfolio.total_amount_portfolio.currency,
             portfolio.total_amount_portfolio.units + portfolio.total_amount_portfolio.nano/1000000000, # amount
-            d1
+            d1,
+            1,
+            1,
+            1
         ]
 
         print(self.pd_port_total)
+
+
+        print("calculate fact itogo:")
+        df_filtered = self.pd_port[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub')
+            ].copy()
+
+        # 2. Векторные расчеты без циклов (работают мгновенно)
+        # Текущая стоимость
+        df_filtered['current_amount'] = df_filtered['current_price'] * df_filtered['quantity']  #
+        # Стоимость покупки
+        df_filtered['average_amount'] = df_filtered['average_position_price'] * df_filtered['quantity']  #
+        # Разница + прибыль - убыток
+        df_filtered['delta'] = df_filtered['current_amount'] - df_filtered['average_amount']
+
+        total_rub_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+
+        print("var1 total_rub_xxxx:", total_rub_xxxx)
+
+        # Var2
+        df_filtered = self.pd_port[
+            #(self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub')
+            ].copy()
+
+        # 2. Векторные расчеты без циклов (работают мгновенно)
+        # Текущая стоимость
+        df_filtered['current_amount'] = df_filtered['current_price'] * df_filtered['quantity']  #
+        # Стоимость покупки
+        df_filtered['average_amount'] = df_filtered['average_position_price'] * df_filtered['quantity']  #
+        # Разница + прибыль - убыток
+        df_filtered['delta'] = df_filtered['current_amount'] - df_filtered['average_amount']
+
+        total_rub_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+
+        money = total_rub_xxxx
+        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        formatted = f"{money:_.2f}".replace("_", " ")
+        print("var2 total_rub_xxxx:", formatted)
+
+        total_rub_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'bond') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+        money = total_rub_xxxx
+        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        formatted = f"{money:_.2f}".replace("_", " ")
+        print("var2 total_rub_bond:", formatted)
+
+        total_rub_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'etf') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'current_amount'
+        ].sum()
+        money = total_rub_xxxx
+        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        formatted = f"{money:_.2f}".replace("_", " ")
+        print("var2 total_rub_ETF:", formatted)
+
         #print(self.pd_port_total)
 
 
@@ -831,7 +1029,10 @@ class inv_port:
                     'act',  # added
                     'curr',  # name
                     'amount',
-                    'date'
+                    'date',
+                    'curr_amount',
+                    'avr_amount',
+                    'delta'
                 ]) # Money curr
 
             #        print(dir(row['accrued_int']))
@@ -840,7 +1041,10 @@ class inv_port:
                     row['Name_pos'],
                     row['curr'],
                     row['amount'],
-                    row['date']
+                    row['date'],
+                    f"{row['curr_amount']:.2f}",
+                    f"{row['avr_amount']:.2f}",
+                    f"{row['delta']:.2f}"
                 ])
 
 #class  inv_operations:
