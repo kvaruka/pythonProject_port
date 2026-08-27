@@ -15,6 +15,9 @@ import csv
 import pandas as pd
 import sqlite3
 import  pickle
+#new11
+
+
 
 from datetime import timedelta
 #  класс главный

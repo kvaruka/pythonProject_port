@@ -43,7 +43,7 @@ def main_from_tink():
     #a.bonds_sort() # расширенная инф по облигациям в портфеле
 
 def test_cl(): # 02/02/2026
-    print("test")
+    print("test1")
 
 def main():
     print("main")
