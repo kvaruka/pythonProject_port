@@ -17,7 +17,7 @@ import sqlite3
 import  pickle
 
 from datetime import timedelta
-#  класс главный1
+#  класс главный
 #class inv_main:
 #    def __init__(self):
 import time
@@ -825,6 +825,7 @@ class inv_port:
                 ])
         #self.fname
     def porfolio_total_inf(self):
+        print('<< beg porfolio_total_inf')
 
         portfolio = self.get_porfolio()
         print('Share', portfolio.total_amount_shares.currency, portfolio.total_amount_shares.units + portfolio.total_amount_shares.nano/1000000000)
@@ -856,7 +857,7 @@ class inv_port:
 
         total_rub_curr_amount = df_filtered.loc[
             (self.pd_port['instrument_type'] == 'share') &
-            (self.pd_port['current_price_curr'] == 'rub'),
+            (self.pd_port['current_price_curr'] == 'ru'),
             'current_amount'
         ].sum()
         total_rub_average_amount = df_filtered.loc[
@@ -942,26 +943,7 @@ class inv_port:
 
 
         print("calculate fact itogo:")
-        df_filtered = self.pd_port[
-            (self.pd_port['instrument_type'] == 'share') &
-            (self.pd_port['current_price_curr'] == 'rub')
-            ].copy()
 
-        # 2. Векторные расчеты без циклов (работают мгновенно)
-        # Текущая стоимость
-        df_filtered['current_amount'] = df_filtered['current_price'] * df_filtered['quantity']  #
-        # Стоимость покупки
-        df_filtered['average_amount'] = df_filtered['average_position_price'] * df_filtered['quantity']  #
-        # Разница + прибыль - убыток
-        df_filtered['delta'] = df_filtered['current_amount'] - df_filtered['average_amount']
-
-        total_rub_xxxx = df_filtered.loc[
-            (self.pd_port['instrument_type'] == 'share') &
-            (self.pd_port['current_price_curr'] == 'rub'),
-            'current_amount'
-        ].sum()
-
-        print("var1 total_rub_xxxx:", total_rub_xxxx)
 
         # Var2
         df_filtered = self.pd_port[
@@ -983,20 +965,21 @@ class inv_port:
             'current_amount'
         ].sum()
 
-        money = total_rub_xxxx
-        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        formatted = f"{money:_.2f}".replace("_", " ")
-        print("var2 total_rub_xxxx:", formatted)
+        #money = total_rub_xxxx
+        # Сначала округляем до 2 знаков, затем меняем '.' на ','
+        total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
+        print("var2 total_rub_share:", total_rub_xxxx)
 
         total_rub_xxxx = df_filtered.loc[
             (self.pd_port['instrument_type'] == 'bond') &
             (self.pd_port['current_price_curr'] == 'rub'),
             'current_amount'
         ].sum()
-        money = total_rub_xxxx
-        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        formatted = f"{money:_.2f}".replace("_", " ")
-        print("var2 total_rub_bond:", formatted)
+
+        # Сначала округляем до 2 знаков, затем меняем '.' на ','
+        total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
+        print("var2 total_rub_bond:", total_rub_xxxx)
+
 
         total_rub_xxxx = df_filtered.loc[
             (self.pd_port['instrument_type'] == 'etf') &
@@ -1004,9 +987,33 @@ class inv_port:
             'current_amount'
         ].sum()
         money = total_rub_xxxx
-        # Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        formatted = f"{money:_.2f}".replace("_", " ")
-        print("var2 total_rub_ETF:", formatted)
+        # Сначала округляем до 2 знаков, затем меняем '.' на ','
+        total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
+        print("var2 total_rub_etf:", total_rub_xxxx)
+
+        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        #formatted = f"{money:_.2f}".replace("_", " ")
+        #print("var2 total_rub_xxxx:", formatted)
+
+        #total_rub_xxxx = df_filtered.loc[
+        #    (self.pd_port['instrument_type'] == 'bond') &
+        #    (self.pd_port['current_price_curr'] == 'rub'),
+        #    'current_amount'
+        #].sum()
+        #money = total_rub_xxxx
+        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        #formatted = f"{money:_.2f}".replace("_", " ")
+        #print("var2 total_rub_bond:", formatted)
+
+        #total_rub_xxxx = df_filtered.loc[
+        #    (self.pd_port['instrument_type'] == 'etf') &
+        #    (self.pd_port['current_price_curr'] == 'rub'),
+        #    'current_amount'
+        #].sum()
+        #money = total_rub_xxxx
+        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
+        #formatted = f"{money:_.2f}".replace("_", " ")
+        #print("var2 total_rub_ETF:", formatted)
 
         #print(self.pd_port_total)
 
@@ -1047,6 +1054,7 @@ class inv_port:
                     f"{row['delta']:.2f}"
                 ])
 
+    print('>> end porfolio_total_inf')
 #class  inv_operations:
 #    def __init__(self):
 # cl_tinv_db - класс для сохранения данных в DB
