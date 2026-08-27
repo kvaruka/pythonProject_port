@@ -17,7 +17,7 @@ import sqlite3
 import  pickle
 
 from datetime import timedelta
-#  класс главный
+#  класс главный1
 #class inv_main:
 #    def __init__(self):
 import time
