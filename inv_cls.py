@@ -9,6 +9,8 @@ from t_tech.invest.utils   import now
 from t_tech.invest.schemas import AssetsRequest
 from t_tech.invest.schemas         import InstrumentStatus
 from t_tech.invest.schemas import GetBondEventsRequest # Добавить это
+#from tinkoff.invest import OperationState
+#from tinkoff.invest import OperationState, OperationType
 from datetime import date
 from datetime import datetime
 import csv
@@ -1057,7 +1059,57 @@ class inv_port:
                     f"{row['delta']:.2f}"
                 ])
 
-    print('>> end porfolio_total_inf')
+        print('>> end porfolio_total_inf')
+
+
+
+#  Работа с операциями и анализ операций
+
+class inv_operations:
+
+    def __init__(self, type):
+        self.token = os.environ.get('TOKEN')
+        self.broker_acc_id = '2018487922'
+        self.broker_acc_name = 'Брокерский счёт'
+        # t.J8_iIGhyaETFSdAbHvcsSqJdr4uv_1I6VPi9spzXhXGrna1zhI_nLsAXVFm8dJeCAdgmhvXDmoVwqp6s8XSong
+    def get_operations(self):
+        #TOKEN = "ВАШ_ТОКЕН_API"
+        #ACCOUNT_ID = ""
+
+
+        with Client(self.token) as client:
+            # Запрашиваем операции по счету с использованием курсора
+            def get_all_operations(account_id):
+                cursor = ""
+                all_operations = []
+
+                while True:
+                    response = client.operations.get_operations_by_cursor(
+                        account_id=account_id,
+                        cursor=cursor,
+                        limit=1000,  # Сколько операций получать за один запрос
+                        #operation_types=[],  # Можно отфильтровать, например: [OperationType.OPERATION_TYPE_BUY]
+                        #state=OperationState.OPERATION_STATE_EXECUTED
+                        #state=OPERATION_STATE_EXECUTED
+                    )
+
+                    all_operations.extend(response.items)
+
+                    # Если есть следующая страница, обновляем курсор, иначе выходим из цикла
+                    if response.has_next:
+                        cursor = response.next_cursor
+                    else:
+                        break
+
+                return all_operations
+
+            operations = get_all_operations(self.broker_acc_id)
+
+            # Выводим базовую информацию по операциям
+            for op in operations:
+                print(
+                    f"Дата: {op.date}, Тип: {op.type_description}, Инструмент (figi): {op.figi}, Сумма: {op.payment.units}.{op.payment.nano}")
+
 #class  inv_operations:
 #    def __init__(self):
 # cl_tinv_db - класс для сохранения данных в DB

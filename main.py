@@ -17,7 +17,7 @@ import csv
 import pandas as pd
 
 # my customer library
-from inv_cls import inv_port, inv_db
+from inv_cls import inv_port, inv_db, inv_operations
 
 # Указываем gRPC использовать скачанный файл сертификата
 #os.environ["GRPC_DEFAULT_SSL_ROOTS_FILE_PATH"] = (
@@ -42,6 +42,10 @@ def main_from_tink():
     a.porfolio_total_inf()
     #a.bonds_sort() # расширенная инф по облигациям в портфеле
 
+def operation():
+    a = inv_operations('Broker')
+    a.get_operations()
+
 def test_cl(): # 02/02/2026
     print("test1")
 
@@ -51,8 +55,10 @@ def main():
     #gen_analise_port()
 
     # Var2 positions
-    main_from_tink()
+   #main_from_tink()
 
+    #Var3
+    operation()
     # test_class
     #a = inv_db()
     #a.temp_test_cls()
