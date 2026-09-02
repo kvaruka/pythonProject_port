@@ -862,7 +862,7 @@ class inv_port:
 
         total_rub_curr_amount = df_filtered.loc[
             (self.pd_port['instrument_type'] == 'share') &
-            (self.pd_port['current_price_curr'] == 'ru'),
+            (self.pd_port['current_price_curr'] == 'rub'),
             'current_amount'
         ].sum()
         total_rub_average_amount = df_filtered.loc[
@@ -1109,6 +1109,78 @@ class inv_operations:
             for op in operations:
                 print(
                     f"Дата: {op.date}, Тип: {op.type_description}, Инструмент (figi): {op.figi}, Сумма: {op.payment.units}.{op.payment.nano}")
+                
+    def get_op_by_cursor(self,token = '') -> pd.DataFrame:
+        # дополнительно параметры account_id, dates
+        if token == '':
+            token = self.token
+        with Client(token) as client:
+            accounts = client.users.get_accounts()
+            account_id = accounts.accounts[0].id
+            acc_id = account_id
+            opened_date = accounts.accounts[0].opened_date  # portfoilio open date
+            def get_request(cursor=""):
+                return GetOperationsByCursorRequest(
+                    account_id=account_id,
+                    from_=now() - timedelta(days=10000),
+                    to=now() - timedelta(days=0),
+                    # instrument_id="BBG004730N88",
+                    cursor=cursor,
+                    limit=1000,
+                )
+
+            #self.toperations = []
+            new_ops = []
+            df = pd.DataFrame(self.toperations)
+            pack = 0
+            operations = client.operations.get_operations_by_cursor(get_request())
+            while True:
+                print(f'Pack {pack}')
+                pack += 1
+                for op in operations.items:
+                    new_ops.append({
+                        'id': op.id,
+                        'date': op.date,
+                        'type': op.type.name,
+                        'figi': op.figi,
+                        'payment': op.payment.units + op.payment.nano / 1e9,
+                        'currency': op.payment.currency,
+                        'description': op.description
+                    })
+                    # Просто пушим в список
+                    #self.toperations.append(new_operation)
+
+                if  not operations.has_next: # выходим из цикла
+                    break
+
+                request = get_request(cursor=operations.next_cursor)
+                operations = client.operations.get_operations_by_cursor(request)
+
+#            # 3. Сохраняем новые данные
+            if new_ops:
+                new_df = pd.DataFrame(new_ops)
+#                # Используем метод, чтобы избежать дубликатов по ID (если нужно)
+#                new_df.to_sql(table_name, conn, if_exists='append', index=False)
+#                print(f"Загружено операций: {len(new_df)}")
+
+                connection = sqlite3.connect('my_database.db')
+                cursor = connection.cursor()
+                new_df.to_sql('oper_lite_all', connection, if_exists='append', index=False)
+                print(f"Загружено операций: {len(new_df)}")
+
+            # 4. Возвращаем результат
+#            full_df = pd.read_sql(f"SELECT * FROM {table_name} ORDER BY date", conn, parse_dates=['date'])
+#            conn.close()
+            return new_df
+
+
+
+        print('<UNK> <UNK> <UNK> <UNK> <UNK>')
+        #df1 = pd.DataFrame(self.toperations)
+        df1 = pd.DataFrame(self.test_qwe)
+        return df1
+        #return pd.DataFrame(self.toperations['cursor'])
+
 
 #class  inv_operations:
 #    def __init__(self):
@@ -1415,11 +1487,3 @@ class inv_db:
         #self.test_qwe[]
 
 # end test part
-
-
-
-
-
-
-
-
