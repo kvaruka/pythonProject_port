@@ -43,8 +43,11 @@ def main_from_tink():
     #a.bonds_sort() # расширенная инф по облигациям в портфеле
 
 def operation():
-    a = inv_operations('Broker')
-    a.get_operations()
+    # a = inv_operations('Broker')
+    # a.get_operations()
+    a = inv_db()
+    #a.temp_test_cls()
+    a.get_op_by_cursor()
 
 def test_cl(): # 02/02/2026
     print("test1")
@@ -55,10 +58,10 @@ def main():
     #gen_analise_port()
 
     # Var2 positions
-   #main_from_tink()
+    main_from_tink()
 
     #Var3
-    operation()
+    #operation()
     # test_class
     #a = inv_db()
     #a.temp_test_cls()
