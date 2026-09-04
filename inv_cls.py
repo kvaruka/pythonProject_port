@@ -1109,7 +1109,7 @@ class inv_operations:
             for op in operations:
                 print(
                     f"Дата: {op.date}, Тип: {op.type_description}, Инструмент (figi): {op.figi}, Сумма: {op.payment.units}.{op.payment.nano}")
-                
+
     def get_op_by_cursor(self,token = '') -> pd.DataFrame:
         # дополнительно параметры account_id, dates
         if token == '':
@@ -1288,6 +1288,7 @@ class inv_db:
         #for operation in self.cr_tab_toperations_sql
 
     def get_op_by_cursor(self,token = '') -> pd.DataFrame:
+        print("<<<get_op_by_cursor")
         # дополнительно параметры account_id, dates
         if token == '':
             token = self.token
@@ -1299,7 +1300,7 @@ class inv_db:
             def get_request(cursor=""):
                 return GetOperationsByCursorRequest(
                     account_id=account_id,
-                    from_=now() - timedelta(days=10000),
+                    from_=now() - timedelta(days=10),
                     to=now() - timedelta(days=0),
                     # instrument_id="BBG004730N88",
                     cursor=cursor,
@@ -1332,8 +1333,25 @@ class inv_db:
 
                 request = get_request(cursor=operations.next_cursor)
                 operations = client.operations.get_operations_by_cursor(request)
+            df1 = pd.DataFrame(new_ops)
+            df1.info()
 
-#            # 3. Сохраняем новые данные
+            # Показывать все столбцы без ограничений
+            pd.set_option('display.max_columns', None)
+
+            # Показывать до 100 строк (вместо скрытия)
+            pd.set_option('display.max_rows', 100)
+
+            # Настройка ширины столбцов, чтобы текст не обрезался
+            pd.set_option('display.max_colwidth', None)
+
+            print('print - df1')
+
+            print(df1[['payment', 'description']])
+            #print(df1[['date']])
+            return
+#
+            # ß3. Сохраняем новые данные
             if new_ops:
                 new_df = pd.DataFrame(new_ops)
 #                # Используем метод, чтобы избежать дубликатов по ID (если нужно)
