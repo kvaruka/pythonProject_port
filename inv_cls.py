@@ -7,18 +7,20 @@ from t_tech.invest         import Client, GetOperationsByCursorRequest
 from t_tech.invest.sandbox.client import SandboxClient
 from t_tech.invest.utils   import now
 from t_tech.invest.schemas import AssetsRequest
-from t_tech.invest.schemas         import InstrumentStatus
+from t_tech.invest.schemas import InstrumentStatus
 from t_tech.invest.schemas import GetBondEventsRequest # Добавить это
-#from tinkoff.invest import OperationState
-#from tinkoff.invest import OperationState, OperationType
+from t_tech.invest.schemas import OperationState
+from t_tech.invest.schemas import OperationType
 from datetime import date
 from datetime import datetime
 import csv
 import pandas as pd
 import sqlite3
 import  pickle
-#new11
 
+#from main import operation
+
+#new11
 
 
 from datetime import timedelta
@@ -844,6 +846,7 @@ class inv_port:
         #'amount': [],  # name
         #'date': []
 
+
         today = date.today()
         d1 = today.strftime("%d.%m.%Y")
 
@@ -944,6 +947,8 @@ class inv_port:
             1
         ]
 
+        # Print Itogi
+        pd.set_option('display.float_format', '{:.0f}'.format)
         print(self.pd_port_total)
 
 
@@ -970,20 +975,37 @@ class inv_port:
             'current_amount'
         ].sum()
 
+        total_rub_delta_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'share') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'delta'
+        ].sum()
+
         #money = total_rub_xxxx
+        # share
         # Сначала округляем до 2 знаков, затем меняем '.' на ','
         total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
+        total_rub_share = total_rub_xxxx
         print("var2 total_rub_share:", total_rub_xxxx)
+        total_rub_share_delt = total_rub_delta_xxxx
 
+        # bonds
         total_rub_xxxx = df_filtered.loc[
             (self.pd_port['instrument_type'] == 'bond') &
             (self.pd_port['current_price_curr'] == 'rub'),
             'current_amount'
         ].sum()
 
+        total_quant_xxxx = df_filtered.loc[
+            (self.pd_port['instrument_type'] == 'bond') &
+            (self.pd_port['current_price_curr'] == 'rub'),
+            'quantity'
+        ].sum()
+
         # Сначала округляем до 2 знаков, затем меняем '.' на ','
         total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
-        print("var2 total_rub_bond:", total_rub_xxxx)
+        total_rub_bonds = total_rub_xxxx
+        print("var2 total_rub_bond:", total_rub_xxxx, total_quant_xxxx)
 
 
         total_rub_xxxx = df_filtered.loc[
@@ -996,37 +1018,8 @@ class inv_port:
         total_rub_xxxx = f"{total_rub_xxxx:.2f}".replace('.', ',')
         print("var2 total_rub_etf:", total_rub_xxxx)
 
-        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        #formatted = f"{money:_.2f}".replace("_", " ")
-        #print("var2 total_rub_xxxx:", formatted)
-
-        #total_rub_xxxx = df_filtered.loc[
-        #    (self.pd_port['instrument_type'] == 'bond') &
-        #    (self.pd_port['current_price_curr'] == 'rub'),
-        #    'current_amount'
-        #].sum()
-        #money = total_rub_xxxx
-        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        #formatted = f"{money:_.2f}".replace("_", " ")
-        #print("var2 total_rub_bond:", formatted)
-
-        #total_rub_xxxx = df_filtered.loc[
-        #    (self.pd_port['instrument_type'] == 'etf') &
-        #    (self.pd_port['current_price_curr'] == 'rub'),
-        #    'current_amount'
-        #].sum()
-        #money = total_rub_xxxx
-        ## Сначала разделяем подчеркиванием, а затем меняем его на пробел
-        #formatted = f"{money:_.2f}".replace("_", " ")
-        #print("var2 total_rub_ETF:", formatted)
-
-        #print(self.pd_port_total)
-
-
-        #portfolio.total_amount_etf
-        #print(portfolio.)
-
- # port_pos.average_position_price.units + port_pos.average_position_price.nano/1000000000,
+        #print("Выход не выводим в файл (см метод a.porfolio_total_inf())")
+        #return
 
    #fname_ext = 'share' + self.fname
         fname_ext = self.fname_total
@@ -1300,15 +1293,20 @@ class inv_db:
             def get_request(cursor=""):
                 return GetOperationsByCursorRequest(
                     account_id=account_id,
-                    from_=now() - timedelta(days=10),
+                    from_=now() - timedelta(days=11140),
                     to=now() - timedelta(days=0),
                     # instrument_id="BBG004730N88",
+                    #state=OperationState.OPERATION_STATE_CANCELED,
+                    #operation_types # list OperationType
+                    operation_types=[OperationType.OPERATION_TYPE_COUPON],
+                    #without_trades
                     cursor=cursor,
                     limit=1000,
                 )
 
             #self.toperations = []
             new_ops = []
+            print(OperationType.OPERATION_TYPE_COUPON)
             df = pd.DataFrame(self.toperations)
             pack = 0
             operations = client.operations.get_operations_by_cursor(get_request())
@@ -1318,12 +1316,27 @@ class inv_db:
                 for op in operations.items:
                     new_ops.append({
                         'id': op.id,
-                        'date': op.date,
+                        'name': op.name,
+                        'date': op.date.strftime('%Y-%m-%d %H:%M:%S'),
                         'type': op.type.name,
                         'figi': op.figi,
-                        'payment': op.payment.units + op.payment.nano / 1e9,
                         'currency': op.payment.currency,
-                        'description': op.description
+                        'description': op.description,
+                        'state': op.state.name,
+                        'instrument_type': op.instrument_type,
+                        'instrument_kind': op.instrument_kind,
+                        'position_uid': op.position_uid,
+                        #'ticker': ,
+                        #'class_code': op, # секция торгов
+                        'payment': op.payment.units + op.payment.nano / 1e9,
+                        'price': op.price.units + op.price.nano / 1e9,
+                        'commission': op.commission.units + op.commission.nano / 1e9,
+                        'yield': op.yield_.units + op.yield_.nano / 1e9,
+                        'yield_relative': op.yield_relative.units + op.yield_relative.nano / 1e9,
+                        'accrued_int': op.accrued_int.units + op.accrued_int.nano / 1e9, # НКД
+                        'quantity': op.quantity,
+                        'quantity_rest': op.quantity_rest,
+                        'quantity_done': op.quantity_done
                     })
                     # Просто пушим в список
                     #self.toperations.append(new_operation)
@@ -1336,18 +1349,26 @@ class inv_db:
             df1 = pd.DataFrame(new_ops)
             df1.info()
 
+            #total_rub_average_amount = df_filtered.loc[
+            #    (self.pd_port['instrument_type'] == 'share') &
+            #    (self.pd_port['average_position_price_curr'] == 'rub'),
+            #    'average_amount'
+            #].sum()
+            sum = df1['payment'].sum()
+            print('Сумма по выборке', sum)
             # Показывать все столбцы без ограничений
             pd.set_option('display.max_columns', None)
 
             # Показывать до 100 строк (вместо скрытия)
-            pd.set_option('display.max_rows', 100)
+            pd.set_option('display.max_rows', 300)
 
             # Настройка ширины столбцов, чтобы текст не обрезался
             pd.set_option('display.max_colwidth', None)
+            pd.set_option('display.width', 1000)  # Максимальная ширина вывода в символах
 
             print('print - df1')
 
-            print(df1[['payment', 'description']])
+            print(df1[['payment', 'type', 'state', 'date', 'name', 'description', 'quantity','quantity_rest', 'quantity_done']])
             #print(df1[['date']])
             return
 #
@@ -1375,6 +1396,7 @@ class inv_db:
         df1 = pd.DataFrame(self.test_qwe)
         return df1
         #return pd.DataFrame(self.toperations['cursor'])
+
     def save_op_db(self, df: pd.DataFrame):
         df.loc[len(df.index)] = [
             '-',  # No ticker found
